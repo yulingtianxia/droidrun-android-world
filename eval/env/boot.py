@@ -8,6 +8,7 @@ from droidrun.portal import (
     ping_portal_content,
     ping_portal_tcp,
     set_overlay_offset,
+    setup_keyboard,
     A11Y_SERVICE_NAME as DROIDRUN_A11Y_SERVICE_NAME,
 )
 from adbutils import adb, AdbDevice
@@ -33,7 +34,7 @@ def ensure_connected(serial: str) -> AdbDevice:
 
 
 def install_portal(device: AdbDevice):
-    logger.info(f"Installing portal...")
+    logger.info("Installing portal...")
 
     try:
         with download_portal_apk() as apk_path:
@@ -43,12 +44,20 @@ def install_portal(device: AdbDevice):
         raise RuntimeError(f"Failed to download and install portal APK: {e}")
 
     try:
+        logger.info("Enabling portal as accessibility service...")
         enable_portal_accessibility(
             device, service_name=DROIDRUN_X_GOOGLE_A11Y_SERVICE_NAME
         )
         logger.info("Portal accessibility enabled successfully")
     except Exception as e:
         raise RuntimeError(f"Failed to enable portal accessibility: {e}")
+
+    try:
+        logger.info("Setting up keyboard for environment...")
+        setup_keyboard(device)
+        logger.info("Keyboard setup completed successfully!")
+    except Exception as e:
+        raise RuntimeError(f"Failed to setup keyboard: {e}")
 
 
 def check_portal(device: AdbDevice):
@@ -127,7 +136,7 @@ def boot_environment(env: AndroidEnvClient, serial: str):
     try:
         logger.info(f"Checking portal for environment {env.base_url}...")
         check_portal(device)
-        logger.info(f"Portal is installed and accessible. You're good to go!")
+        logger.info("Portal is installed and accessible. You're good to go!")
         return
     except Exception as e:
         logger.info(
@@ -145,7 +154,7 @@ def boot_environment(env: AndroidEnvClient, serial: str):
     try:
         logger.info(f"Checking portal for environment {env.base_url}...")
         check_portal(device)
-        logger.info(f"Portal is installed and accessible. You're good to go!")
+        logger.info("Portal is installed and accessible. You're good to go!")
     except Exception as e:
         logger.error(f"Environment {env.base_url} failed to check portal: {e}")
         raise e
