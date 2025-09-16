@@ -5,37 +5,12 @@ This module provides functionality to continuously disable the overlay of the
 DroidRun accessibility service, which is necessary for some tasks.
 """
 
-import os
-import sys
-import time
 import logging
-import asyncio
-import subprocess
-from typing import Optional
-from contextlib import contextmanager
-from adbutils import adb, AdbDevice
+from adbutils import adb
+from droidrun.portal import toggle_overlay
 import threading
 
 logger = logging.getLogger(__name__)
-
-
-def disable_overlay_once(device: AdbDevice):
-    """Disable the overlay once.
-
-    Args:
-        adb_path: Path to ADB executable
-        device_serial: Device serial number
-    """
-    try:
-        device.shell(
-            "am broadcast -a com.droidrun.portal.TOGGLE_OVERLAY --ez overlay_visible false"
-        )
-
-        logger.debug("Disabled overlay once")
-        return True
-    except Exception as e:
-        logger.error(f"Failed to disable overlay: {e}")
-        return False
 
 
 class KeepOverlayDisabled:
@@ -48,8 +23,11 @@ class KeepOverlayDisabled:
     def disable_loop(self):
         """Continuously disable overlay until stop event is set."""
         while not self.stop_event.is_set():
-            disable_overlay_once(self.device)
-            # Use wait instead of sleep to allow for immediate stop
+            try:
+                toggle_overlay(self.device, False)
+            except Exception as e:
+                logger.warning(f"Failed to disable overlay: {e}")
+
             self.stop_event.wait(self.interval)
 
     def start(self):
