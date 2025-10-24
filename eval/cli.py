@@ -67,7 +67,7 @@ def version():
 @cli.command()
 @click.option(
     "--env-url",
-    default="http://localhost:5000",
+    default="http://localhost:5001",
     help="Android World Environment URL to use.",
 )
 def list_tasks(env_url):
@@ -81,7 +81,7 @@ def list_tasks(env_url):
 @cli.command()
 @click.option(
     "--env-url",
-    default="http://localhost:5000",
+    default="http://localhost:5001",
     help="Android World Environment URL to use.",
 )
 @click.option("--env-serial", default="emulator-5554", help="Device serial to use.")
@@ -110,7 +110,7 @@ def disable_overlay(env_serial):
 @cli.command()
 @click.option(
     "--env-url",
-    default="http://localhost:5000",
+    default="http://localhost:5001",
     help="Android World Environment URL to use.",
 )
 @click.option("--env-serial", default="emulator-5554", help="Device serial to use.")
@@ -124,6 +124,7 @@ def disable_overlay(env_serial):
 )
 @click.option("--llm-provider", default="Gemini", help="LLM provider to use.")
 @click.option("--llm-model", default="gemini-2.5-pro", help="LLM model to use.")
+@click.option("--api-base", default=None, help="Base URL for API (e.g., OpenAI-compatible API).")
 @click.option("--vision", is_flag=True, help="Enable vision.")
 @click.option("--reasoning", is_flag=True, help="Enable reasoning.")
 @click.option("--reflection", is_flag=True, help="Enable reflection.")
@@ -144,6 +145,7 @@ async def run(
     n_task_combinations,
     llm_provider,
     llm_model,
+    api_base,
     vision,
     reasoning,
     reflection,
@@ -185,7 +187,11 @@ async def run(
     logger.info(f"Found tasks: {', '.join(task_list)} ({len(task_list)})")
 
     logger.debug(f"Loading LLM: {llm_provider} {llm_model} {temperature}")
-    llm = load_llm(llm_provider, model=llm_model, temperature=temperature)
+    llm_kwargs = {"model": llm_model, "temperature": temperature}
+    if api_base:
+        llm_kwargs["api_base"] = api_base
+        logger.debug(f"Using custom API base: {api_base}")
+    llm = load_llm(llm_provider, **llm_kwargs)
     logger.debug("LLM loaded successfully")
 
     for task_name in task_list:

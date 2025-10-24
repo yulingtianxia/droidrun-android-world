@@ -24,13 +24,20 @@ DEFAULT_OVERLAY_OFFSET = -126
 
 def ensure_connected(serial: str) -> AdbDevice:
     try:
-        res = adb.connect(serial)
-        if res.count("failed") > 0 or res.count("unable") > 0:
-            raise res
+        # For emulator devices (emulator-*), they're already connected locally
+        # Only try network connect for IP addresses
+        if ":" in serial or not serial.startswith("emulator-"):
+            res = adb.connect(serial)
+            if res.count("failed") > 0 or res.count("unable") > 0:
+                raise RuntimeError(f"Failed to connect: {res}")
+        
+        # Verify device is available
+        device = adb.device(serial)
+        # Test if device is accessible
+        device.shell("echo test")
+        return device
     except Exception as e:
         raise RuntimeError(f"Device {serial} is not connected: {e}")
-    
-    return adb.device(serial)
 
 
 def install_portal(device: AdbDevice):

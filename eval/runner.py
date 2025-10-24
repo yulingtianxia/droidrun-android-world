@@ -57,18 +57,41 @@ async def run_task_on_env(
     )
 
     tools = AndroidWorldTools(device_serial, env)
+    
+    # Import new config classes for DroidAgent
+    from droidrun.config_manager.config_manager import (
+        DroidrunConfig,
+        AgentConfig,
+        DeviceConfig,
+        LoggingConfig,
+        TracingConfig,
+        ManagerConfig,
+        ExecutorConfig,
+        CodeActConfig,
+    )
+    
+    # Build config for new DroidAgent API
+    agent_config = AgentConfig(
+        reasoning=reasoning,
+        max_steps=max_steps,
+        manager=ManagerConfig(vision=vision),
+        executor=ExecutorConfig(vision=vision),
+        codeact=CodeActConfig(vision=vision),
+    )
+    
+    config = DroidrunConfig(
+        agent=agent_config,
+        device=DeviceConfig(),
+        logging=LoggingConfig(debug=debug, save_trajectory="none"),
+        tracing=TracingConfig(enabled=tracing),
+    )
+    
     agent = DroidAgent(
         goal=task_goal,
-        llm=llm,
+        config=config,
+        llms=llm,  # New API accepts single LLM for all agents
         tools=tools,
-        reasoning=reasoning,
-        enable_tracing=tracing,
-        debug=debug,
-        max_steps=max_steps,
         timeout=timeout,
-        save_trajectories="none",
-        reflection=reflection,
-        vision=vision,
     )
 
     logger.debug("DroidAgent initialized successfully")
@@ -95,15 +118,25 @@ async def run_task_on_env(
         logger.warn(f"Droidrun timed out for task {task_name} {task_idx}: {e}")
         score = env.get_task_score(task_name, task_idx)
         logger.info(f"Task {task_name} {task_idx} score: {score}")
+        
+        # Create a simple result object for timeout
+        class TimeoutResult:
+            def __init__(self):
+                self.success = False
+                self.reason = f"Timeout after {timeout} seconds"
+                # Handle both old and new API for step counter
+                if hasattr(agent, 'step_counter'):
+                    self.steps = agent.step_counter
+                elif hasattr(agent, 'shared_state') and hasattr(agent.shared_state, 'step_number'):
+                    self.steps = agent.shared_state.step_number
+                else:
+                    self.steps = 0
+        
         result = get_task_result(
             task_result,
             agent,
             score=score,
-            agent_result={
-                "steps": agent.step_counter,
-                "success": False,
-                "reason": f"Timeout after {timeout} seconds",
-            },
+            agent_result=TimeoutResult(),
             device=device_serial,
         )
     except Exception as e:
