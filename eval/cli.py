@@ -8,7 +8,7 @@ from eval.env.client import AndroidEnvClient
 from eval.env.boot import boot_environment
 from eval.runner import run_task_on_env
 from eval.tracker import write_task_result
-from eval.portal.keepalive import disable_overlay_once
+from droidrun.portal import toggle_overlay
 from droidrun import load_llm, __version__ as droidrun_version
 from android_world import __version__ as android_world_version
 from adbutils import adb
@@ -100,7 +100,7 @@ def check(env_url, env_serial):
 def disable_overlay(env_serial):
     try:
         device = adb.device(env_serial)
-        disable_overlay_once(device)
+        toggle_overlay(device, False)
         logger.info("Overlay disabled")
     except Exception as e:
         logger.error(f"Error disabling overlay: {e}")
