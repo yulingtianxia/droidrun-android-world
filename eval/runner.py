@@ -32,6 +32,7 @@ async def run_task_on_env(
     reflection: bool,
     tracing: bool,
     debug: bool,
+    droidrun_config=None,
 ) -> Tuple[TaskResult, Exception | None]:
     env.reset(go_home=True)
     task_goal = env.get_task_goal(task_name, task_idx)
@@ -70,29 +71,47 @@ async def run_task_on_env(
         CodeActConfig,
     )
     
-    # Build config for new DroidAgent API
-    agent_config = AgentConfig(
-        reasoning=reasoning,
-        max_steps=max_steps,
-        manager=ManagerConfig(vision=vision),
-        executor=ExecutorConfig(vision=vision),
-        codeact=CodeActConfig(vision=vision),
-    )
-    
-    config = DroidrunConfig(
-        agent=agent_config,
-        device=DeviceConfig(),
-        logging=LoggingConfig(debug=debug, save_trajectory="none"),
-        tracing=TracingConfig(enabled=tracing),
-    )
-    
-    agent = DroidAgent(
-        goal=task_goal,
-        config=config,
-        llms=llm,  # New API accepts single LLM for all agents
-        tools=tools,
-        timeout=timeout,
-    )
+    # Use provided config or build from CLI parameters
+    if droidrun_config is not None:
+        # Use the provided DroidrunConfig from config.yaml
+        logger.info("Using DroidRun config from config.yaml")
+        config = droidrun_config
+        
+        # Override max_steps in the config
+        config.agent.max_steps = max_steps
+        
+        agent = DroidAgent(
+            goal=task_goal,
+            config=config,
+            # Don't pass llms - let DroidAgent load from config.llm_profiles
+            tools=tools,
+            timeout=timeout,
+        )
+    else:
+        # Build config from CLI parameters (backward compatibility)
+        logger.info("Building DroidRun config from CLI parameters")
+        agent_config = AgentConfig(
+            reasoning=reasoning,
+            max_steps=max_steps,
+            manager=ManagerConfig(vision=vision),
+            executor=ExecutorConfig(vision=vision),
+            codeact=CodeActConfig(vision=vision),
+        )
+        
+        config = DroidrunConfig(
+            agent=agent_config,
+            device=DeviceConfig(),
+            logging=LoggingConfig(debug=debug, save_trajectory="none"),
+            tracing=TracingConfig(enabled=tracing),
+        )
+        
+        agent = DroidAgent(
+            goal=task_goal,
+            config=config,
+            llms=llm,  # Pass single LLM for all agents
+            tools=tools,
+            timeout=timeout,
+        )
 
     logger.debug("DroidAgent initialized successfully")
 
