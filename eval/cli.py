@@ -86,9 +86,10 @@ def list_tasks(env_url):
 )
 @click.option("--env-serial", default="emulator-5554", help="Device serial to use.")
 def check(env_url, env_serial):
+    import asyncio
     env = AndroidEnvClient(env_url)
     try:
-        boot_environment(env, env_serial)
+        asyncio.run(boot_environment(env, env_serial))
         logger.info("Environment is healthy")
     except Exception as e:
         logger.error(f"Error booting environment: {e}")
@@ -160,7 +161,7 @@ async def run(
     env = AndroidEnvClient(env_url)
 
     try:
-        boot_environment(env, env_serial)
+        await boot_environment(env, env_serial)
     except Exception as e:
         logger.error(f"Error booting environment: {e}")
         logger.info(
@@ -214,7 +215,7 @@ async def run(
 
         for task_idx in range(num_tasks):
             try:
-                boot_environment(env, env_serial)
+                await boot_environment(env, env_serial)
             except Exception as e:
                 logger.error(f"Error booting environment: {e}")
                 logger.info(
