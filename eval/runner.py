@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import math
 from typing import Tuple
@@ -123,6 +124,12 @@ async def run_task_on_env(
         agent_result = await agent.run()
         logger.debug("DroidAgent completed successfully")
 
+        # Wait for UI to stabilize after agent completion
+        # This ensures that any overlay messages or UI transitions have completed
+        # before AndroidWorld evaluates the task state
+        logger.debug("Waiting for UI to stabilize before scoring...")
+        await asyncio.sleep(2.0)  # 2 second delay to allow UI to stabilize
+
         score = env.get_task_score(task_name, task_idx)
         logger.info(f"Task {task_name} {task_idx} score: {score}")
 
@@ -135,6 +142,10 @@ async def run_task_on_env(
         )
     except WorkflowTimeoutError as e:
         logger.warn(f"Droidrun timed out for task {task_name} {task_idx}: {e}")
+        # Wait for UI to stabilize even after timeout
+        logger.debug("Waiting for UI to stabilize before scoring (timeout case)...")
+        await asyncio.sleep(2.0)  # 2 second delay to allow UI to stabilize
+        
         score = env.get_task_score(task_name, task_idx)
         logger.info(f"Task {task_name} {task_idx} score: {score}")
         
